@@ -5,10 +5,11 @@ import TransactionList from "@/components/TransactionList";
 import AddCategoryButton from "@/components/AddCategoryButton";
 import EditTransactionModal from "@/components/modals/EditTransactionModal";
 import AddCategoryModal from "@/components/modals/AddCategoryModal";
+import MonthlyComparisonDashboard from "@/components/MonthlyComparisonDashboard";
 import Papa from 'papaparse';
 import { Transaction, CategoryTotal } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
-import { ReceiptText, CheckCircle2, Flag } from "lucide-react";
+import { ReceiptText, CheckCircle2, Flag, LayoutDashboard, ListFilter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const SpendingTracker = () => {
@@ -38,6 +39,7 @@ const SpendingTracker = () => {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
   
   // Fixed categories definition - customize these based on your needs
   const fixedCategories = ['Bills & Utilities', 'Home', 'Education'];
@@ -650,6 +652,37 @@ const SpendingTracker = () => {
             <ReceiptText className="h-7 w-7 mr-2 text-primary" />
             Fixed vs. Flexible Spending Tracker
           </h1>
+          
+          {transactions.length > 0 && (
+            <div className="mt-4 md:mt-0 flex">
+              <div className="inline-flex rounded-md shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setShowDashboard(false)}
+                  className={`relative inline-flex items-center rounded-l-md px-3 py-2 text-sm font-medium ${
+                    !showDashboard
+                      ? 'bg-primary text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <ListFilter className="h-4 w-4 mr-2" />
+                  Transactions
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDashboard(true)}
+                  className={`relative -ml-px inline-flex items-center rounded-r-md px-3 py-2 text-sm font-medium ${
+                    showDashboard
+                      ? 'bg-primary text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <LayoutDashboard className="h-4 w-4 mr-2" />
+                  Dashboard
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
@@ -664,28 +697,38 @@ const SpendingTracker = () => {
           setEndDate={setEndDate}
         />
 
-        <SpendingSummary 
-          fixedTotal={fixedTotal}
-          flexibleTotal={flexibleTotal}
-          formatCurrency={formatCurrency}
-          categoryTotals={categoryTotals}
-          fixedCategories={fixedCategories}
-        />
+        {!showDashboard ? (
+          <>
+            <SpendingSummary 
+              fixedTotal={fixedTotal}
+              flexibleTotal={flexibleTotal}
+              formatCurrency={formatCurrency}
+              categoryTotals={categoryTotals}
+              fixedCategories={fixedCategories}
+            />
 
-        <TransactionList
-          loading={loading}
-          selectedCategory={selectedCategory}
-          categoryTotals={categoryTotals}
-          fixedCategories={fixedCategories}
-          formatCurrency={formatCurrency}
-          handleCategoryClick={handleCategoryClick}
-          filteredTransactions={filteredTransactions}
-          startEditing={startEditing}
-          flagTransaction={flagTransaction}
-          totalSpending={fixedTotal + flexibleTotal}
-        />
+            <TransactionList
+              loading={loading}
+              selectedCategory={selectedCategory}
+              categoryTotals={categoryTotals}
+              fixedCategories={fixedCategories}
+              formatCurrency={formatCurrency}
+              handleCategoryClick={handleCategoryClick}
+              filteredTransactions={filteredTransactions}
+              startEditing={startEditing}
+              flagTransaction={flagTransaction}
+              totalSpending={fixedTotal + flexibleTotal}
+            />
 
-        <AddCategoryButton onClick={() => setShowCategoryModal(true)} />
+            <AddCategoryButton onClick={() => setShowCategoryModal(true)} />
+          </>
+        ) : (
+          <MonthlyComparisonDashboard
+            transactions={transactions}
+            fixedCategories={fixedCategories}
+            formatCurrency={formatCurrency}
+          />
+        )}
       </main>
 
       <footer className="bg-white border-t border-gray-200 py-4">
