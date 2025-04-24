@@ -378,6 +378,8 @@ const SpendingTracker = () => {
     const transaction = updatedFiltered[transactionIndex];
     
     if (transaction) {
+      const oldCategory = transaction.Category;
+      
       // Update category in filtered list
       updatedFiltered[transactionIndex] = { ...transaction, Category: newCategory };
       
@@ -403,6 +405,17 @@ const SpendingTracker = () => {
       setEditingTransaction(null);
       setSelectedNewCategory('');
       setShowEditModal(false);
+      
+      // If we're in a category view and we're moving out of the current category,
+      // we should update the view to reflect the change
+      if (selectedCategory && oldCategory === selectedCategory && newCategory !== selectedCategory) {
+        // Either switch view to the new category or go back to the category list
+        if (confirm(`Transaction moved to ${newCategory}. View that category now?`)) {
+          setSelectedCategory(newCategory);
+        } else {
+          setSelectedCategory(null); // Go back to category list
+        }
+      }
     }
   };
 
@@ -422,6 +435,10 @@ const SpendingTracker = () => {
     const transaction = updatedFiltered[transactionIndex];
     
     if (transaction) {
+      const oldCategory = transaction.Category;
+      const newCategory = updatedFields.Category;
+      const categoryChanged = newCategory && oldCategory !== newCategory;
+      
       // Update transaction in filtered list
       updatedFiltered[transactionIndex] = { ...transaction, ...updatedFields };
       
@@ -446,6 +463,16 @@ const SpendingTracker = () => {
       // Reset editing state
       setEditingTransaction(null);
       setShowEditModal(false);
+      
+      // If category has changed and we're viewing a specific category
+      if (categoryChanged && selectedCategory && oldCategory === selectedCategory) {
+        // Either switch view to the new category or go back to the category list
+        if (confirm(`Transaction moved to ${newCategory}. View that category now?`)) {
+          setSelectedCategory(newCategory);
+        } else {
+          setSelectedCategory(null); // Go back to category list
+        }
+      }
     }
   };
 

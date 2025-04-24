@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { Transaction } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Flag, Edit } from "lucide-react";
+import { Flag, Edit, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CategoryTransactionsProps {
   category: string;
@@ -17,8 +19,34 @@ const CategoryTransactions = ({
   startEditing,
   flagTransaction
 }: CategoryTransactionsProps) => {
+  const [showTransactionsMovedAlert, setShowTransactionsMovedAlert] = useState(false);
+  
+  // When a transaction is moved from this category, show an alert
+  useEffect(() => {
+    if (transactions.length === 0) {
+      setShowTransactionsMovedAlert(true);
+      // Hide the alert after 5 seconds
+      const timer = setTimeout(() => {
+        setShowTransactionsMovedAlert(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    } else {
+      setShowTransactionsMovedAlert(false);
+    }
+  }, [transactions.length]);
+  
   return (
     <div id="category-transactions">
+      {showTransactionsMovedAlert && (
+        <Alert variant="warning" className="mb-4 bg-amber-50 border-amber-200">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertDescription>
+            Transactions have been moved out of this category. You can return to the category list to see all categories.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
