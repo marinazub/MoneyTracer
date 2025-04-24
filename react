@@ -1,0 +1,175 @@
+import React, { useState } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Papa from 'papaparse';
+
+const categorize = (description) => {
+  description = description.toLowerCase();
+  if (description.includes("shell") || description.includes("gas") || description.includes("chevron")) return "Gas";
+  if (description.includes("grocery") || description.includes("food") || description.includes("market") || description.includes("qfc") || description.includes("safeway") || description.includes("trader joe")) return "Groceries";
+  if (description.includes("car wash") || description.includes("automotive") || description.includes("oil")) return "Automotive";
+  if (description.includes("travel") || description.includes("toll") || description.includes("goodtogo") || description.includes("airlines") || description.includes("hotel")) return "Travel";
+  if (description.includes("shop") || description.includes("mall") || description.includes("target") || description.includes("walmart") || description.includes("amazon")) return "Shopping";
+  if (description.includes("restaurant") || description.includes("cafe") || description.includes("doner") || description.includes("bakery") || description.includes("pizza") || description.includes("bella") || description.includes("starbucks")) return "Dining Out";
+  if (description.includes("insurance") || description.includes("geico")) return "Insurance";
+  if (description.includes("netflix") || description.includes("canva") || description.includes("replit") || description.includes("patreon") || description.includes("subscription")) return "Subscriptions";
+  if (description.includes("mariners") || description.includes("concert") || description.includes("event") || description.includes("mccaw hall")) return "Entertainment";
+  return "Other";
+};
+
+const groupByCategory = (transactions) => {
+  return transactions.reduce((acc, curr) => {
+    if (!acc[curr.category]) acc[curr.category] = [];
+    acc[curr.category].push(curr);
+    return acc;
+  }, {});
+};
+
+const getRecommendations = (groupedData) => {
+  const totalSpending = Object.values(groupedData).flat().reduce((sum, t) => sum + t.amount, 0);
+  const sorted = Object.entries(groupedData).sort((a, b) => {
+    const totalA = a[1].reduce((sum, t) => sum + t.amount, 0);
+    const totalB = b[1].reduce((sum, t) => sum + t.amount, 0);
+    return totalB - totalA;
+  });
+
+  return sorted.slice(0, 3).map(([category, items]) => {
+    const categoryTotal = items.reduce((sum, t) => sum + t.amount, 0);
+    const percent = ((categoryTotal / totalSpending) * 100).toFixed(1);
+    return `You spent $${categoryTotal.toFixed(2)} on ${category} (${percent}% of total). Consider setting a limit or reducing frequency next month.`;
+  });
+};
+
+export default function App() {
+  const [transactions, setTransactions] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [customCategories, setCustomCategories] = useState([]);
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      Papa.parse(file, {
+        header: true,
+        complete: (results) => {
+          const parsed = results.data.map((row) => ({
+            date: row["Transaction Date"],
+            description: row["Description"],
+            category: categorize(row["Description"] || ""),
+            amount: Math.abs(parseFloat(row["Amount"] || 0))
+          })).filter(t => t.date && !isNaN(t.amount));
+          setTransactions(parsed);
+        }
+      });
+    }
+  };
+
+  const handleCategoryChange = (original, newCategory) => {
+    const updated = transactions.map((t) => {
+      if (
+        t.date === original.date &&
+        t.description === original.description &&
+        t.amount === original.amount
+      ) {
+        return { ...t, category: newCategory };
+      }
+      return t;
+    });
+    setTransactions(updated);
+  };
+
+  const addCustomCategory = (name) => {
+    if (!customCategories.includes(name)) {
+      setCustomCategories([...customCategories, name]);
+    }
+  };
+
+  const filteredTransactions = transactions.filter((t) => {
+    const txDate = new Date(t.date);
+    const from = startDate ? new Date(startDate) : null;
+    const to = endDate ? new Date(endDate) : null;
+    return (!from || txDate >= from) && (!to || txDate <= to);
+  });
+
+  const groupedData = groupByCategory(filteredTransactions);
+  const allCategories = [...new Set([...Object.keys(groupedData), ...customCategories])];
+  const recommendations = getRecommendations(groupedData);
+
+  return (
+    <div className="p-4 space-y-4">
+      <h1 className="text-2xl font-bold mb-4">Spending Categories</h1>
+
+      <input type="file" accept=".csv" onChange={handleFileUpload} className="mb-4" />
+
+      <div className="flex space-x-4">
+        <div>
+          <label className="block mb-1 font-medium">Start Date:</label>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border p-2 rounded" />
+        </div>
+        <div>
+          <label className="block mb-1 font-medium">End Date:</label>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border p-2 rounded" />
+        </div>
+      </div>
+
+      {filteredTransactions.length > 0 && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Object.entries(groupedData).map(([category, items]) => (
+              <Card key={category} onClick={() => setSelectedCategory(category)} className="cursor-pointer hover:shadow-lg">
+                <CardContent className="p-4">
+                  <p className="font-semibold text-lg">{category}</p>
+                  <p>Total: ${items.reduce((sum, i) => sum + i.amount, 0).toFixed(2)}</p>
+                  <p>{items.length} purchases</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="mt-6">
+            <h2 className="text-xl font-bold mb-2">Recommendations for Next Month</h2>
+            <ul className="list-disc ml-6 space-y-2">
+              {recommendations.map((rec, i) => (
+                <li key={i}>{rec}</li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+
+      {selectedCategory && (
+        <div className="mt-6">
+          <h2 className="text-xl font-bold mb-2">{selectedCategory} Purchases</h2>
+          <ul className="space-y-2">
+            {filteredTransactions
+              .filter((item) => item.category === selectedCategory)
+              .map((item, index) => (
+                <li key={index} className="border p-2 rounded shadow-sm">
+                  <p><strong>{item.date}</strong>: {item.description}</p>
+                  <p>Amount: ${item.amount.toFixed(2)}</p>
+                  <select
+                    value={item.category}
+                    onChange={(e) => handleCategoryChange(item, e.target.value)}
+                    className="mt-2 border p-1 rounded"
+                  >
+                    {allCategories.map((cat, idx) => (
+                      <option key={idx} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </li>
+              ))}
+          </ul>
+          <div className="mt-4">
+            <input type="text" placeholder="Add new category" className="border p-2 rounded mr-2" id="new-category" />
+            <Button onClick={() => {
+              const name = document.getElementById("new-category").value;
+              if (name) addCustomCategory(name);
+            }}>Add Category</Button>
+          </div>
+          <Button className="mt-4" onClick={() => setSelectedCategory(null)}>Back to Categories</Button>
+        </div>
+      )}
+    </div>
+  );
+}
