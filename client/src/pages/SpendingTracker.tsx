@@ -8,9 +8,13 @@ import AddCategoryModal from "@/components/modals/AddCategoryModal";
 import Papa from 'papaparse';
 import { Transaction, CategoryTotal } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
-import { ReceiptText } from "lucide-react";
+import { ReceiptText, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const SpendingTracker = () => {
+  // Toast notifications
+  const { toast } = useToast();
+  
   // State for file, transactions, date range, analysis results, etc.
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('');
@@ -482,15 +486,23 @@ const SpendingTracker = () => {
   };
 
   // Add new category
-  const addCategory = (categoryName: string, isFixed: boolean) => {
+  const addCategory = (categoryName: string, isFixed: boolean, description?: string) => {
     if (!categoryName.trim()) {
-      alert('Please enter a category name');
+      toast({
+        title: "Error",
+        description: "Please enter a category name",
+        variant: "destructive",
+      });
       return;
     }
     
     // Check if category already exists
     if (availableCategories.includes(categoryName)) {
-      alert('This category already exists');
+      toast({
+        title: "Error",
+        description: "This category already exists",
+        variant: "destructive",
+      });
       return;
     }
     
@@ -502,6 +514,27 @@ const SpendingTracker = () => {
     if (isFixed) {
       fixedCategories.push(categoryName);
     }
+    
+    // Show success message with toast notification
+    const categoryType = isFixed ? 'fixed' : 'flexible';
+    toast({
+      title: "Category Added",
+      description: (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center">
+            <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
+            <span>
+              Added new <span className="font-semibold">{categoryType}</span> category: <span className="font-semibold">{categoryName}</span>
+            </span>
+          </div>
+          {description && (
+            <div className="text-sm text-gray-600 mt-1 pl-6">
+              Description: {description}
+            </div>
+          )}
+        </div>
+      )
+    });
     
     // Reset state and close modal
     setNewCategoryName('');
@@ -576,6 +609,7 @@ const SpendingTracker = () => {
         open={showCategoryModal}
         onClose={() => setShowCategoryModal(false)}
         onAdd={addCategory}
+        existingCategories={availableCategories}
       />
     </div>
   );

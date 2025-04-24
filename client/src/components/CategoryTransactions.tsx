@@ -39,7 +39,7 @@ const CategoryTransactions = ({
   return (
     <div id="category-transactions">
       {showTransactionsMovedAlert && (
-        <Alert variant="warning" className="mb-4 bg-amber-50 border-amber-200">
+        <Alert className="mb-4 bg-amber-50 border-amber-200">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
           <AlertDescription>
             Transactions have been moved out of this category. You can return to the category list to see all categories.
