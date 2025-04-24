@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { Transaction, CategoryTotal } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { ArrowDown, ArrowUp, DollarSign, BarChart4, TrendingUp, RefreshCw, CalendarClock } from 'lucide-react';
+import { ArrowDown, ArrowUp, DollarSign, BarChart4, TrendingUp, RefreshCw, CalendarClock, X, Calendar, Info } from 'lucide-react';
 
 interface MonthlyComparisonDashboardProps {
   transactions: Transaction[];
@@ -20,6 +20,7 @@ interface RecurringTransaction {
   occurrences: number;
   lastDate: string;
   averageAmount: number;
+  transactions?: Transaction[]; // Store the actual transactions for details view
 }
 
 interface MonthlyData {
@@ -54,6 +55,8 @@ const MonthlyComparisonDashboard: React.FC<MonthlyComparisonDashboardProps> = ({
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [categoryTrends, setCategoryTrends] = useState<CategoryTrend[]>([]);
   const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
+  const [selectedTransaction, setSelectedTransaction] = useState<RecurringTransaction | null>(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState<boolean>(false);
   const [showFixed, setShowFixed] = useState<boolean>(true);
   const [showFlexible, setShowFlexible] = useState<boolean>(true);
   const [selectedMonths, setSelectedMonths] = useState<number>(3); // Show last 3 months by default
@@ -234,7 +237,8 @@ const MonthlyComparisonDashboard: React.FC<MonthlyComparisonDashboardProps> = ({
           category: category,
           occurrences: txns.length,
           lastDate: lastTransaction['Transaction Date'],
-          averageAmount: avgAmount
+          averageAmount: avgAmount,
+          transactions: txns // Store the original transactions for details view
         });
       }
     });
@@ -595,7 +599,14 @@ const MonthlyComparisonDashboard: React.FC<MonthlyComparisonDashboardProps> = ({
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {recurringTransactions.map((item, index) => (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <tr 
+                      key={index} 
+                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 cursor-pointer transition-colors`}
+                      onClick={() => {
+                        setSelectedTransaction(item);
+                        setDetailsModalOpen(true);
+                      }}
+                    >
                       <td className="px-3 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
@@ -617,6 +628,9 @@ const MonthlyComparisonDashboard: React.FC<MonthlyComparisonDashboardProps> = ({
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                           {item.occurrences} payments detected
                         </span>
+                        <span className="ml-2 text-xs text-primary hover:text-primary/80">
+                          <Info className="h-3 w-3 inline" /> Click for details
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -633,6 +647,116 @@ const MonthlyComparisonDashboard: React.FC<MonthlyComparisonDashboardProps> = ({
               <p className="text-xs mt-1 text-gray-400">
                 * Recurring transactions are detected by analyzing patterns in your spending history
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transaction Details Modal */}
+      {detailsModalOpen && selectedTransaction && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="text-lg font-semibold flex items-center">
+                <CalendarClock className="h-5 w-5 mr-2 text-primary" />
+                Recurring Payment Details
+              </h3>
+              <button 
+                onClick={() => {
+                  setDetailsModalOpen(false);
+                  setSelectedTransaction(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-auto">
+              <div className="mb-6">
+                <h4 className="text-xl font-medium text-gray-900 mb-1">{selectedTransaction.description}</h4>
+                <p className="text-sm text-gray-500">
+                  Category: <span className="font-medium">{selectedTransaction.category}</span>
+                </p>
+              </div>
+              
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex-1 min-w-[200px]">
+                    <p className="text-xs text-gray-500 uppercase font-medium mb-1">Average Monthly Payment</p>
+                    <p className="text-2xl font-semibold text-primary">{formatCurrency(selectedTransaction.averageAmount)}</p>
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <p className="text-xs text-gray-500 uppercase font-medium mb-1">Payment Frequency</p>
+                    <p className="text-lg font-medium">
+                      {selectedTransaction.occurrences} payments over{' '}
+                      {selectedTransaction.transactions && selectedTransaction.transactions.length > 1 
+                        ? Math.round((new Date(selectedTransaction.lastDate).getTime() - 
+                          new Date(selectedTransaction.transactions[0]['Transaction Date']).getTime()) 
+                          / (1000 * 60 * 60 * 24 * 30)) 
+                        : 0} months
+                    </p>
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <p className="text-xs text-gray-500 uppercase font-medium mb-1">Last Payment</p>
+                    <p className="text-lg font-medium">{selectedTransaction.lastDate}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <h4 className="text-base font-medium text-gray-900 mb-3 flex items-center">
+                <Calendar className="h-4 w-4 mr-2 text-primary" />
+                Payment History
+              </h4>
+              
+              {selectedTransaction.transactions && (
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {selectedTransaction.transactions
+                        .sort((a, b) => {
+                          const dateA = parseTransactionDate(a['Transaction Date']) || new Date(0);
+                          const dateB = parseTransactionDate(b['Transaction Date']) || new Date(0);
+                          return dateB.getTime() - dateA.getTime(); // Sort by date, newest first
+                        })
+                        .map((tx, index) => (
+                          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {tx['Transaction Date']}
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 font-medium text-right">
+                              {formatCurrency(Math.abs(tx.Amount))}
+                            </td>
+                            <td className="px-3 py-2 text-sm text-gray-500 truncate max-w-[300px]">
+                              {tx.Description}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 bg-gray-50 border-t mt-auto">
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    setDetailsModalOpen(false);
+                    setSelectedTransaction(null);
+                  }}
+                  className="bg-white border border-gray-300 rounded-md py-2 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
