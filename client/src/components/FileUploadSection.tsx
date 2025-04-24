@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Upload, CloudUpload } from "lucide-react";
 
 interface FileUploadSectionProps {
-  fileName: string;
+  fileNames: string[];
   handleFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   loadDemoData: () => void;
   startDate: string;
@@ -15,7 +15,7 @@ interface FileUploadSectionProps {
 }
 
 const FileUploadSection = ({
-  fileName,
+  fileNames,
   handleFileUpload,
   loadDemoData,
   startDate,
@@ -43,12 +43,21 @@ const FileUploadSection = ({
                 id="csv-upload" 
                 type="file" 
                 accept=".csv" 
+                multiple
                 className="hidden" 
                 onChange={handleFileUpload}
               />
             </label>
             <div className="mt-3 text-sm text-gray-500">
-              <span id="file-name">{fileName || 'No file selected'}</span>
+              {fileNames.length > 0 ? (
+                <ul className="list-disc pl-4">
+                  {fileNames.map((name, index) => (
+                    <li key={index}>{name}</li>
+                  ))}
+                </ul>
+              ) : (
+                <span id="file-name">No files selected</span>
+              )}
             </div>
           </div>
 

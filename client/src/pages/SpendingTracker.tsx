@@ -16,9 +16,9 @@ const SpendingTracker = () => {
   // Toast notifications
   const { toast } = useToast();
   
-  // State for file, transactions, date range, analysis results, etc.
-  const [file, setFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState('');
+  // State for files, transactions, date range, analysis results, etc.
+  const [files, setFiles] = useState<File[]>([]);
+  const [fileNames, setFileNames] = useState<string[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [startDate, setStartDate] = useState('');
@@ -50,11 +50,16 @@ const SpendingTracker = () => {
 
   // Handle file upload
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const uploadedFile = event.target.files?.[0];
-    if (uploadedFile) {
-      setFile(uploadedFile);
-      setFileName(uploadedFile.name);
-      parseCSV(uploadedFile);
+    const uploadedFiles = event.target.files;
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      const filesArray = Array.from(uploadedFiles);
+      setFiles(filesArray);
+      setFileNames(filesArray.map(file => file.name));
+      
+      // Process each file
+      filesArray.forEach(file => {
+        parseCSV(file);
+      });
     }
   };
 
@@ -82,8 +87,11 @@ const SpendingTracker = () => {
           setStartDate(formatDate(oneMonthAgo));
         }
         
-        // Extract all unique categories
-        let categories = [...new Set(parsedTransactions
+        // Combine with existing transactions
+        const combinedTransactions = [...transactions, ...parsedTransactions];
+        
+        // Extract all unique categories from combined transactions
+        let categories = [...new Set(combinedTransactions
           .filter(t => t.Category) // Filter out undefined/null categories
           .map(t => t.Category || 'Uncategorized'))];
         
@@ -109,19 +117,27 @@ const SpendingTracker = () => {
         
         setAvailableCategories(categories);
         
-        // Store transactions
-        setTransactions(parsedTransactions);
+        // Store combined transactions
+        setTransactions(combinedTransactions);
         
-        // Apply date filter
-        filterTransactionsByDate(parsedTransactions);
+        // Apply date filter to all transactions
+        filterTransactionsByDate(combinedTransactions);
         setLoading(false);
+        
+        // Show success notification
+        if (parsedTransactions.length > 0) {
+          toast({
+            title: "File Imported",
+            description: `Added ${parsedTransactions.length} transactions from ${file.name}`,
+          });
+        }
       },
       error: (error) => {
         console.error('Error parsing CSV:', error);
         setLoading(false);
         toast({
           title: "Error Parsing CSV",
-          description: "Please make sure your CSV file is properly formatted and try again.",
+          description: `Error parsing ${file.name}. Please make sure your CSV file is properly formatted.`,
           variant: "destructive",
         });
       }
@@ -323,7 +339,7 @@ const SpendingTracker = () => {
     
     // Store transactions
     setTransactions(demoTransactions);
-    setFileName('demo-data.csv');
+    setFileNames(['demo-data.csv']);
     
     // Apply date filter
     setTimeout(() => {
@@ -688,7 +704,7 @@ const SpendingTracker = () => {
 
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
         <FileUploadSection 
-          fileName={fileName}
+          fileNames={fileNames}
           handleFileUpload={handleFileUpload}
           loadDemoData={loadDemoData}
           startDate={startDate}
