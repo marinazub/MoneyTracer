@@ -8,7 +8,7 @@ import AddCategoryModal from "@/components/modals/AddCategoryModal";
 import Papa from 'papaparse';
 import { Transaction, CategoryTotal } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
-import { ReceiptText, CheckCircle2 } from "lucide-react";
+import { ReceiptText, CheckCircle2, Flag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const SpendingTracker = () => {
@@ -117,7 +117,11 @@ const SpendingTracker = () => {
       error: (error) => {
         console.error('Error parsing CSV:', error);
         setLoading(false);
-        alert('Error parsing CSV file. Please make sure it\'s properly formatted.');
+        toast({
+          title: "Error Parsing CSV",
+          description: "Please make sure your CSV file is properly formatted and try again.",
+          variant: "destructive",
+        });
       }
     });
   };
@@ -413,12 +417,35 @@ const SpendingTracker = () => {
       // If we're in a category view and we're moving out of the current category,
       // we should update the view to reflect the change
       if (selectedCategory && oldCategory === selectedCategory && newCategory !== selectedCategory) {
-        // Either switch view to the new category or go back to the category list
-        if (confirm(`Transaction moved to ${newCategory}. View that category now?`)) {
-          setSelectedCategory(newCategory);
-        } else {
-          setSelectedCategory(null); // Go back to category list
-        }
+        // Use toast notification with action buttons instead of confirm dialog
+        toast({
+          title: "Transaction Moved",
+          description: (
+            <div className="flex flex-col gap-1">
+              <div>
+                Transaction has been moved to <span className="font-semibold">{newCategory}</span>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button 
+                  onClick={() => setSelectedCategory(newCategory)}
+                  className="bg-primary text-white px-3 py-1 rounded-md text-xs"
+                >
+                  View that category
+                </button>
+                <button 
+                  onClick={() => setSelectedCategory(null)}
+                  className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md text-xs"
+                >
+                  Stay on category list
+                </button>
+              </div>
+            </div>
+          ),
+          duration: 5000, // Give user more time to decide
+        });
+        
+        // Default behavior: go back to category list
+        setSelectedCategory(null);
       }
     }
   };
@@ -470,19 +497,93 @@ const SpendingTracker = () => {
       
       // If category has changed and we're viewing a specific category
       if (categoryChanged && selectedCategory && oldCategory === selectedCategory) {
-        // Either switch view to the new category or go back to the category list
-        if (confirm(`Transaction moved to ${newCategory}. View that category now?`)) {
-          setSelectedCategory(newCategory);
-        } else {
-          setSelectedCategory(null); // Go back to category list
-        }
+        // Use toast notification with action buttons instead of confirm dialog
+        toast({
+          title: "Transaction Updated",
+          description: (
+            <div className="flex flex-col gap-1">
+              <div>
+                Transaction has been updated with category <span className="font-semibold">{newCategory}</span>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button 
+                  onClick={() => setSelectedCategory(newCategory)}
+                  className="bg-primary text-white px-3 py-1 rounded-md text-xs"
+                >
+                  View that category
+                </button>
+                <button 
+                  onClick={() => setSelectedCategory(null)}
+                  className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md text-xs"
+                >
+                  Stay on category list
+                </button>
+              </div>
+            </div>
+          ),
+          duration: 5000, // Give user more time to decide
+        });
+        
+        // Default behavior: go back to category list
+        setSelectedCategory(null);
       }
     }
   };
 
-  // Flag a transaction for review
+  // Flag a transaction for review - creates a duplicate in Flagged category
   const flagTransaction = (index: number) => {
-    updateTransactionCategory(index, FLAGGED_CATEGORY);
+    // Check for valid index
+    if (index < 0 || index >= filteredTransactions.length) {
+      console.error("Invalid transaction index:", index);
+      return;
+    }
+    
+    // Get the transaction to flag
+    const transactionToFlag = filteredTransactions[index];
+    
+    if (!transactionToFlag) {
+      console.error("Transaction not found at index:", index);
+      return;
+    }
+    
+    // Create a duplicate of the transaction with the flagged category
+    const flaggedTransaction: Transaction = {
+      ...transactionToFlag,
+      Category: FLAGGED_CATEGORY,
+      Memo: `${transactionToFlag.Memo || ''} [FLAGGED: ${new Date().toLocaleDateString()}]`.trim()
+    };
+    
+    // Add the flagged transaction to both transaction lists
+    const updatedFiltered = [...filteredTransactions, flaggedTransaction];
+    const updatedAll = [...transactions, flaggedTransaction];
+    
+    // Update state
+    setFilteredTransactions(updatedFiltered);
+    setTransactions(updatedAll);
+    
+    // Re-analyze transactions with updated data
+    analyzeTransactions(updatedFiltered);
+    
+    // Show toast notification
+    toast({
+      title: "Transaction Flagged",
+      description: (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center">
+            <Flag className="h-4 w-4 mr-2 text-amber-500" />
+            <span>
+              A copy of this transaction has been added to the <span className="font-semibold">Flagged for Review</span> category.
+            </span>
+          </div>
+          <div className="text-sm text-gray-600 mt-1 pl-6">
+            Amount: {formatCurrency(Math.abs(transactionToFlag.Amount || 0))}
+          </div>
+          <div className="text-sm text-gray-600 pl-6">
+            {transactionToFlag.Description}
+          </div>
+        </div>
+      )
+    });
   };
 
   // Add new category
