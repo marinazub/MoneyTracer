@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spending Tracker App</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.4rem;
+            margin-bottom: 10px;
+        }
+        
+        h2 {
+            font-size: 1.8rem;
+            margin-top: 30px;
+            color: #2575fc;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+        }
+        
+        p {
+            font-size: 1.1rem;
+        }
+        
+        .feature-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin: 30px 0;
+        }
+        
+        .feature {
+            width: 48%;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .feature h3 {
+            color: #6a11cb;
+            margin-top: 0;
+        }
+        
+        .feature p {
+            font-size: 1rem;
+        }
+        
+        .cta {
+            text-align: center;
+            margin: 50px 0;
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(37, 117, 252, 0.2);
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(37, 117, 252, 0.3);
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .feature {
+                width: 100%;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Spending Tracker App</h1>
+        <p>Take control of your finances with powerful transaction analytics</p>
+    </header>
+    
+    <section>
+        <h2>About This Project</h2>
+        <p>
+            The Spending Tracker is a React-based financial transaction analyzer that helps users track, categorize, 
+            and visualize their spending patterns with advanced monthly comparison and recurring transaction insights.
+        </p>
+        
+        <div class="feature-container">
+            <div class="feature">
+                <h3>Multi-file Transactions</h3>
+                <p>Upload and analyze transactions from multiple sources simultaneously to get a complete picture of your finances.</p>
+            </div>
+            <div class="feature">
+                <h3>Custom Categories</h3>
+                <p>Create custom categories and mark them as fixed or flexible expenses to better understand your spending habits.</p>
+            </div>
+            <div class="feature">
+                <h3>Monthly Comparisons</h3>
+                <p>Compare your spending month-over-month to identify trends and areas where you can save money.</p>
+            </div>
+            <div class="feature">
+                <h3>Recurring Payment Detection</h3>
+                <p>Automatically identify subscription services and recurring payments to help you manage your regular expenses.</p>
+            </div>
+        </div>
+    </section>
+    
+    <section>
+        <h2>Key Features</h2>
+        <ul>
+            <li>Interactive dashboard with comprehensive spending analytics</li>
+            <li>Transaction management with category editing and flagging capabilities</li>
+            <li>Multi-file support for analyzing data from different sources</li>
+            <li>Flexible date filtering to focus on specific time periods</li>
+            <li>Modern, responsive UI built with React and Tailwind CSS</li>
+        </ul>
+    </section>
+    
+    <div class="cta">
+        <a href="https://github.com/marinazub/MoneyTracer" class="button">View on GitHub</a>
+    </div>
+    
+    <section>
+        <h2>Technologies Used</h2>
+        <ul>
+            <li>React.js with TypeScript</li>
+            <li>Vite for fast development and building</li>
+            <li>Tailwind CSS with shadcn/ui components</li>
+            <li>Chart visualization with Recharts</li>
+            <li>Node.js/Express backend</li>
+        </ul>
+    </section>
+    
+    <footer>
+        <p>&copy; <script>document.write(new Date().getFullYear())</script> Spending Tracker App</p>
+        <p>View the <a href="https://github.com/marinazub/MoneyTracer">GitHub repository</a> for more information</p>
+    </footer>
+</body>
+</html>
