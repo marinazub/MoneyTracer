@@ -5,12 +5,21 @@ import {
 } from 'recharts';
 import { Transaction, CategoryTotal } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { ArrowDown, ArrowUp, DollarSign, BarChart4, TrendingUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, DollarSign, BarChart4, TrendingUp, RefreshCw, CalendarClock } from 'lucide-react';
 
 interface MonthlyComparisonDashboardProps {
   transactions: Transaction[];
   fixedCategories: string[];
   formatCurrency: (amount: number) => string;
+}
+
+interface RecurringTransaction {
+  description: string;
+  amount: number;
+  category: string;
+  occurrences: number;
+  lastDate: string;
+  averageAmount: number;
 }
 
 interface MonthlyData {
@@ -44,6 +53,7 @@ const MonthlyComparisonDashboard: React.FC<MonthlyComparisonDashboardProps> = ({
 }) => {
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [categoryTrends, setCategoryTrends] = useState<CategoryTrend[]>([]);
+  const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
   const [showFixed, setShowFixed] = useState<boolean>(true);
   const [showFlexible, setShowFlexible] = useState<boolean>(true);
   const [selectedMonths, setSelectedMonths] = useState<number>(3); // Show last 3 months by default
@@ -155,6 +165,85 @@ const MonthlyComparisonDashboard: React.FC<MonthlyComparisonDashboardProps> = ({
       setCategoryTrends(trends);
     }
   }, [transactions, fixedCategories]);
+
+  // Detect recurring transactions (subscriptions)
+  useEffect(() => {
+    if (!transactions.length) return;
+
+    // Group transactions by description
+    const transactionsByDescription: { [key: string]: Transaction[] } = {};
+    
+    // Only consider transactions within the last 6 months
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    // Filter and group transactions
+    transactions.forEach(transaction => {
+      if (!transaction['Transaction Date'] || transaction.Amount >= 0) return;
+      
+      const date = parseTransactionDate(transaction['Transaction Date']);
+      if (!date || date < sixMonthsAgo) return;
+      
+      // Lowercase and trim the description for better matching
+      const normalizedDesc = transaction.Description.toLowerCase().trim();
+      
+      // Skip very short or numeric-only descriptions
+      if (normalizedDesc.length < 3 || /^\d+$/.test(normalizedDesc)) return;
+      
+      if (!transactionsByDescription[normalizedDesc]) {
+        transactionsByDescription[normalizedDesc] = [];
+      }
+      
+      transactionsByDescription[normalizedDesc].push(transaction);
+    });
+    
+    // Analyze each group for recurring patterns
+    const recurringItems: RecurringTransaction[] = [];
+    
+    Object.entries(transactionsByDescription).forEach(([description, txns]) => {
+      // Sort transactions by date (oldest first)
+      txns.sort((a, b) => {
+        const dateA = parseTransactionDate(a['Transaction Date']) || new Date(0);
+        const dateB = parseTransactionDate(b['Transaction Date']) || new Date(0);
+        return dateA.getTime() - dateB.getTime();
+      });
+      
+      // We need at least 2 transactions to identify a pattern
+      if (txns.length < 2) return;
+      
+      // Check if amounts are consistent (within 15% variance)
+      const amounts = txns.map(t => Math.abs(t.Amount));
+      const avgAmount = amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
+      
+      // Check if all amounts are within 15% of the average
+      const areAmountsConsistent = amounts.every(amount => 
+        Math.abs(amount - avgAmount) / avgAmount < 0.15
+      );
+      
+      if (!areAmountsConsistent && txns.length < 3) return;
+      
+      // If we have 3+ transactions with the same description, it's likely a subscription
+      // If we have only 2, they need to be consistent in amount and roughly a month apart
+      if (txns.length >= 3 || areAmountsConsistent) {
+        const lastTransaction = txns[txns.length - 1];
+        const category = lastTransaction.Category || 'Uncategorized';
+        
+        recurringItems.push({
+          description: description,
+          amount: avgAmount,
+          category: category,
+          occurrences: txns.length,
+          lastDate: lastTransaction['Transaction Date'],
+          averageAmount: avgAmount
+        });
+      }
+    });
+    
+    // Sort by amount (highest first)
+    recurringItems.sort((a, b) => b.amount - a.amount);
+    
+    setRecurringTransactions(recurringItems);
+  }, [transactions]);
 
   // Helper function to parse date
   const parseTransactionDate = (dateStr: string) => {
@@ -479,6 +568,71 @@ const MonthlyComparisonDashboard: React.FC<MonthlyComparisonDashboardProps> = ({
                     ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recurring Subscriptions and Payments */}
+      {recurringTransactions.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <RefreshCw className="h-5 w-5 mr-2 text-primary" />
+            Recurring Monthly Payments
+          </h3>
+          
+          <div className="bg-white shadow rounded-lg p-4">
+            <div className="overflow-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service/Merchant</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Amount</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Last Payment</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Frequency</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {recurringTransactions.map((item, index) => (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-3 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                            <CalendarClock className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="font-medium text-gray-900">{item.description}</div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
+                        {item.category}
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 font-medium text-right">
+                        {formatCurrency(item.amount)}
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
+                        {item.lastDate}
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-right">
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                          {item.occurrences} payments detected
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="mt-4 text-sm text-gray-500">
+              <p>
+                <span className="font-medium">Total Monthly Subscriptions:</span> {formatCurrency(
+                  recurringTransactions.reduce((sum, item) => sum + item.amount, 0)
+                )}
+              </p>
+              <p className="text-xs mt-1 text-gray-400">
+                * Recurring transactions are detected by analyzing patterns in your spending history
+              </p>
             </div>
           </div>
         </div>
